@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import logging
 import aiohttp
 import asyncio
+import time
 
 
 @dataclass
@@ -11,19 +12,26 @@ class Item:
     body: str
 
 
-def retry(
-    func: Callable,
-    retries: int,
-    *args,
-    exceptions: Type[Exception] = Exception,
-    **kwargs,
+def retry_decorator(
+    retries: Optional[int] = None,
+    exceptions: Type[Exception] | tuple[Type[Exception], ...] = Exception,
 ):
-    for i in range(retries):
-        try:
-            return func(*args, **kwargs)
-        except exceptions as e:
-            continue
-    return None
+    def decorator(func: Callable):
+        async def wrapper(*args, **kwargs):
+            _retries = retries
+            while _retries:
+                try:
+                    return await func(*args, **kwargs)
+                except exceptions as e:
+                    _retries -= 1
+                    print(f"Retrying: {_retries}")
+                    time.sleep(1)
+                    continue
+            raise ValueError
+
+        return wrapper
+
+    return decorator
 
 
 class JsonplaceholderAPI:
@@ -32,13 +40,13 @@ class JsonplaceholderAPI:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
 
-    async def fetch_with_retry(self, url: str, retries: int) -> Optional[Dict[str, Any]]:
+    @retry_decorator(retries=10, exceptions=(Exception, aiohttp.ClientError))
+    async def fetch(self, url: str) -> Optional[Dict[str, Any]]:
         async def get(session, url):
             async with session.get(url) as response:
-                res = await response.json()
-            return res
+                return await response.json()
 
-        return await retry(get, retries, self.session, url)
+        return await get(self.session, url)
 
     async def retrieve_data(
         self,
@@ -47,7 +55,7 @@ class JsonplaceholderAPI:
     ) -> AsyncGenerator[Item, None]:
         url = self.base_url + f"{resource}?_page={pagination}"
         try:
-            items = await self.fetch_with_retry(url, retries=10)
+            items = await self.fetch(url)
             for item in items:
                 yield self.create_item(item)
             if items is not None:
