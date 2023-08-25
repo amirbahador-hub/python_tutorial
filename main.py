@@ -10,34 +10,32 @@ class Item:
     id: int
     body: str
 
-class JsonplaceholderAPI:
 
+class JsonplaceholderAPI:
     base_url = 'https://jsonplaceholder.typicode.com/'
 
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
 
     async def fetch_with_retry(
-        self, url: str, retries: int
-    ) -> aiohttp.ClientResponse | None:
-        async with self.session.get(
-            url
-        ) as response:
-            try:
-                for i in range(retries):
+            self, url: str, retries: int
+    ) -> dict | None:
+        try:
+            for i in range(retries):
+                async with self.session.get(url) as response:
                     return await response.json()
-            except Exception:
-                return None
-        
+        except Exception:
+            return None
 
     async def retrieve_data(
-        self,
-        resource: str,
-        pagination: int = 1,
+            self,
+            resource: str,
+            pagination: int = 1,
     ) -> AsyncGenerator[Item, None]:
         url = self.base_url + f"{resource}?_page={pagination}"
         try:
             items = await self.fetch_with_retry(url, retries=10)
+            print(items)
             for item in items:
                 item_id = item.get("id")
                 item_body = item.get("body")
@@ -46,10 +44,10 @@ class JsonplaceholderAPI:
                     body=item_body,
                 )
             if items is not None:
-                    async for item in self.retrieve_data(
+                async for item in self.retrieve_data(
                         resource=resource, pagination=pagination + 1
-                    ):
-                        yield item
+                ):
+                    yield item
         except Exception as ex:
             logging.error(
                 f"Exception: {ex}"
@@ -57,11 +55,11 @@ class JsonplaceholderAPI:
 
 
 async def process_items(
-    api: JsonplaceholderAPI,
-    resource: str,
+        api: JsonplaceholderAPI,
+        resource: str,
 ) -> None:
     async for item in api.retrieve_data(
-        resource=resource
+            resource=resource
     ):
         print(item)
 
@@ -79,5 +77,6 @@ async def main():
             ))
             tasks.append(task)
         await asyncio.gather(*tasks)
+
 
 asyncio.run(main())
