@@ -20,12 +20,10 @@ class JsonplaceholderAPI:
     async def fetch_with_retry(
         self, url: str, retries: int
     ) -> aiohttp.ClientResponse | None:
-        async with self.session.get(
-            url
-        ) as response:
             try:
                 for i in range(retries):
-                    return await response.json()
+                    async with self.session.get(url) as response:
+                        return await response.json()
             except Exception:
                 return None
         
