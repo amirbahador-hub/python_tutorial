@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Callable
+from typing import AsyncGenerator, Callable, Type, Optional, Dict, Any
 from dataclasses import dataclass
 import logging
 import aiohttp
@@ -12,7 +12,11 @@ class Item:
 
 
 def retry(
-    func: Callable, retries: int, *args, exceptions: Exception = Exception, **kwargs
+    func: Callable,
+    retries: int,
+    *args,
+    exceptions: Type[Exception] = Exception,
+    **kwargs,
 ):
     for i in range(retries):
         try:
@@ -28,9 +32,7 @@ class JsonplaceholderAPI:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
 
-    async def fetch_with_retry(
-        self, url: str, retries: int
-    ) -> aiohttp.ClientResponse | None:
+    async def fetch_with_retry(self, url: str, retries: int) -> Optional[Dict[str, Any]]:
         async def get(session, url):
             async with session.get(url) as response:
                 res = await response.json()
