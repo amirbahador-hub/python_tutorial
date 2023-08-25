@@ -11,11 +11,13 @@ class Item:
     body: str
 
 
-def retry(func: Callable, retries: int, *args, **kwargs):
+def retry(
+    func: Callable, retries: int, *args, exceptions: Exception = Exception, **kwargs
+):
     for i in range(retries):
         try:
             return func(*args, **kwargs)
-        except Exception:
+        except exceptions as e:
             continue
     return None
 
