@@ -55,7 +55,6 @@ class JsonPlaceholderApi:
             yield self.create_item(item)
 
     async def extract_data(self, client_response: aiohttp.ClientResponse) -> list[dict]:
-        """if the json response can't be parsed raise PaginationEndedException"""
         items = await self.get_json(client_response)
         if len(items) > 0:
             return items
