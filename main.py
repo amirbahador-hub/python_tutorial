@@ -74,9 +74,10 @@ class JsonPlaceholderApi:
             return None
 
 
-async def process_items_with_pagination(resource: str, api: JsonPlaceholderApi):
+async def process_items_with_pagination(resource: str, api: JsonPlaceholderApi) -> None:
     pagination = 0
-    while True:
+    errors = 0
+    while errors <= 10:
         pagination += 1
         try:
             async for item in api.retrieve_data(resource, pagination):
@@ -84,6 +85,7 @@ async def process_items_with_pagination(resource: str, api: JsonPlaceholderApi):
         except PaginationEndedException:
             break
         except (FetchingDataFailedException, JsonParsingException):
+            errors += 1
             continue
 
 
